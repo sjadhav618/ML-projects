@@ -7,7 +7,7 @@ A modular machine learning framework designed to bridge the gap between messy, u
 ## Why I Built This
 Working extensively with clinical trials and real-world medical data, I saw firsthand how much critical information gets locked away in unstructured text—from doctor's notes to patient narratives. Standardizing these inputs traditionally requires heavy manual coding or disjointed tools. 
 
-Drawing from my professional background working with **MedDRA** (for adverse event and symptom coding) and **WHO Drug** (for harmonizing disparate trade and brand names into standardized active ingredients), I wanted to build a clean, transparent, and modular pipeline. This repository demonstrates how schema-first extraction can automate clinical coding and power intelligent, patient-centric applications safely.
+Drawing from my professional background working with **MedDRA** (for adverse event and symptom coding; not included in this repo as it sits as separate collaborative work) and **WHO Drug** (for harmonizing disparate trade and brand names into standardized active ingredients), I wanted to build a clean, transparent, and modular pipeline. This repository demonstrates how schema-first extraction can automate clinical coding and power intelligent, patient-centric applications safely.
 
 ---
 
