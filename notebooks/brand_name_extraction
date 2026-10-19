@@ -1,0 +1,136 @@
+"""
+SDTM-CM-CSV-Exporter: CDISC Concomitant Medications Pipeline
+-------------------------------------------------------------
+This one is inspired from my experience in WHO Drug coding the script extracts medication brand names from clinical trial notes, 
+maps them to CDISC SDTM CM domain variables, and exports the final dataset 
+directly into a CSV file formatted for regulatory data management.
+
+You will pydantic package installation.
+"""
+
+from typing import List, Optional
+import pandas as pd
+from pydantic import BaseModel, Field
+
+
+# ==========================================
+# 1. DEFINE CDISC SDTM-INSPIRED SCHEMAS
+# ==========================================
+class SDTMCMRecord(BaseModel):
+    """
+    Represents a single record in the SDTM Concomitant Medications (CM) domain.
+    Variable names conform strictly to official CDISC SDTM IG v3.4.
+    """
+    STUDYID: str = Field(..., description="Study Identifier")
+    DOMAIN: str = Field("CM", description="Domain Abbreviation (CM)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier")
+    CMSEQ: int = Field(..., description="Sequence Number (1, 2, 3...)")
+    CMTRT: str = Field(..., description="Reported Name of Drug (Verbatim/Brand)")
+    CMDECOD: str = Field(..., description="Standardized Medication Name (WHODrug)")
+    CMSTDTC: Optional[str] = Field(None, description="Start Date/Time of Medication (ISO 8601)")
+
+
+class ModelInput(BaseModel):
+    """Container for patient site notes from eCRFs."""
+    study_id: str
+    usubjid: str
+    site_narrative: str
+    visit_date: str
+
+
+# ==========================================
+# 2. DICTIONARY LOOKUP & EXTRACTION ENGINE
+# ==========================================
+# Mimics a medical dictionary (e.g., WHODrug) for standardization
+WHODRUG_DICTIONARY = {
+    "lipitor": "ATORVASTATIN CALCIUM",
+    "glucophage": "METFORMIN HYDROCHLORIDE",
+    "humira": "ADALIMUMAB",
+    "keytruda": "PEMBROLIZUMAB"
+}
+
+
+def process_trial_narratives(trial_inputs: List[ModelInput]) -> List[SDTMCMRecord]:
+    """
+    Parses narratives across all trial subjects and returns a list of SDTM CM records.
+    """
+    all_sdtm_records = []
+    
+    for input_data in trial_inputs:
+        text_lower = input_data.site_narrative.lower()
+        seq_num = 1  # Track sequence number per subject
+        
+        for brand, generic in WHODRUG_DICTIONARY.items():
+            if brand in text_lower:
+                record = SDTMCMRecord(
+                    STUDYID=input_data.study_id,
+                    DOMAIN="CM",
+                    USUBJID=input_data.usubjid,
+                    CMSEQ=seq_num,
+                    CMTRT=brand.upper(),    # Standard CDISC uppercase convention
+                    CMDECOD=generic,        # Standardized generic term
+                    CMSTDTC=input_data.visit_date
+                )
+                all_sdtm_records.append(record)
+                seq_num += 1
+                
+    return all_sdtm_records
+
+
+# ==========================================
+# 3. TABULAR CONVERSION & CSV EXPORT ENGINE
+# ==========================================
+def export_sdtm_to_csv(sdtm_records: List[SDTMCMRecord], filename: str = "cm.csv") -> pd.DataFrame:
+    """
+    Converts list of SDTM Pydantic records into a pandas DataFrame 
+    and exports it to a standard CSV file.
+    """
+    # Convert Pydantic list to dictionary records
+    dict_records = [record.model_dump() for record in sdtm_records]
+    
+    # Create Pandas DataFrame
+    df = pd.DataFrame(dict_records)
+    
+    # Save to CSV (index=False ensures no extra pandas row indices are added)
+    df.to_csv(filename, index=False)
+    print(f" -> Successfully exported SDTM CM dataset to '{filename}'!\n")
+    return df
+
+
+# ==========================================
+# 4. EXECUTION
+# ==========================================
+if __name__ == "__main__":
+    # Simulated clinical trial notes across multiple subjects
+    sample_trial_notes = [
+        ModelInput(
+            study_id="STUDY-ONC-2026",
+            usubjid="SITE101-SUBJ001",
+            site_narrative="Subject reported ongoing hyperlipidemia. Taking Lipitor 20mg daily.",
+            visit_date="2026-10-18"
+        ),
+        ModelInput(
+            study_id="STUDY-ONC-2026",
+            usubjid="SITE101-SUBJ002",
+            site_narrative="Subject reports localized joint pain. Mentioned previous use of Humira with good response.",
+            visit_date="2026-10-18"
+        ),
+        ModelInput(
+            study_id="STUDY-ONC-2026",
+            usubjid="SITE102-SUBJ005",
+            site_narrative="Type 2 diabetes patient on Glucophage. Also starting Keytruda infusion cycle today.",
+            visit_date="2026-10-19"
+        )
+    ]
+
+    print("=== STARTING CDISC SDTM-CM CSV PIPELINE ===\n")
+    
+    # Step 1: Extract records
+    records = process_trial_narratives(sample_trial_notes)
+    
+    # Step 2: Export directly to CSV
+    cm_df = export_sdtm_to_csv(records, filename="cm_domain.csv")
+    
+    # Step 3: Print tabular representation in console
+    print("--- SDTM CM Table View ---")
+    print(cm_df.to_string(index=False))
