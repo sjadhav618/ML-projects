@@ -2,6 +2,8 @@
 
 A modular machine learning framework designed to bridge the gap between messy, unstructured clinical text and rigorous regulatory standards. This repository reflects my hands-on experience in **Clinical Data Management, Data Architecture, and Pharmacovigilance**, specifically translating clinician notes and case report forms into structured, actionable insights.
 
+The final product has a personal health agent that extracts drug names from clinical notes and flags likely side effects and drug–drug interactions, so patients can monitor related conditions.
+
 ---
 
 ## Why I Built This
